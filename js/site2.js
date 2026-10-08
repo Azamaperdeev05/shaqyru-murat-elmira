@@ -60,8 +60,43 @@ if (savedAnswer) {
 }
 
 var konakid = $("input[name='konakid']").val() || localStorage.getItem('shaqyru_konak_id');
+window.keleAlmaymynConfirmed = false;
+
+$("label[for='contactChoice3'], #contactChoice3").on('click', function(e) {
+    e.preventDefault();
+    $('#keleAlmaymynModal').modal('show');
+});
+
+$("#btnBaribirKelemin").on('click', function() {
+    window.keleAlmaymynConfirmed = false;
+    $("#contactChoice1").prop('checked', true);
+    $('#keleAlmaymynModal').modal('hide');
+    var storedName = localStorage.getItem('shaqyru_guest_name');
+    if(!storedName && (konakid == 0 || konakid === '' || konakid === null || konakid === undefined)) {
+        $('#nameengiz').modal('show');
+    } else {
+        otpravka($("#form-1"));
+    }
+});
+
+$("#btnZharaidy").on('click', function() {
+    window.keleAlmaymynConfirmed = true;
+    $("#contactChoice3").prop('checked', true);
+    $('#keleAlmaymynModal').modal('hide');
+    var storedName = localStorage.getItem('shaqyru_guest_name');
+    if(!storedName && (konakid == 0 || konakid === '' || konakid === null || konakid === undefined)) {
+        $('#nameengiz').modal('show');
+    } else {
+        otpravka($("#form-1"));
+    }
+});
 
 $(".zayotrp").click(function() {
+    var zhauap = $("input[name='zhauap']:checked").val();
+    if (zhauap == '1' && !window.keleAlmaymynConfirmed) {
+        $('#keleAlmaymynModal').modal('show');
+        return;
+    }
     var storedName = localStorage.getItem('shaqyru_guest_name');
     if(!storedName && (konakid == 0 || konakid === '' || konakid === null || konakid === undefined)) 
         $('#nameengiz').modal('show');
@@ -78,6 +113,7 @@ $('.play-game-btn').click(function () {
 });
 
 $(".oprosozgertu").click(function() {
+    window.keleAlmaymynConfirmed = false;
     $('.otvetnaopros').hide();
     $('.opros').show();
     konakid = $("input[name='konakid']").val() || localStorage.getItem('shaqyru_konak_id');
