@@ -134,7 +134,7 @@ function otpravka(divid) {
 
     function completeSuccess(guestName) {
         $("#sattizhauap").modal('show');
-        if (sattizhauap) sattizhauap.play();
+        if (typeof sattizhauap !== 'undefined' && sattizhauap && sattizhauap.play) sattizhauap.play();
         $(".otvetname").html(guestName);
         $(".otvetzhauap").html(zhauaptext);
         $(".opros").hide();
@@ -142,17 +142,10 @@ function otpravka(divid) {
         localStorage.setItem('shaqyru_guest_answer', JSON.stringify({ name: guestName, zhauap: zhauap, zhauaptext: zhauaptext }));
     }
 
-    $.ajax({
-        method: "POST",
-        url: "zayavka2.php",
-        data: {'rejim': 2, 'zhauap': zhauap, 'shaqyruid': $.trim(divid.children("input[name='shaqyruid']").val()), 'konakid': $.trim(divid.children("input[name='konakid']").val()) }
-    })
-    .done(function (msg) {
-        completeSuccess(msg || name);
-    })
-    .fail(function () {
-        completeSuccess(name);
-    });
+    if (window.sendGuestRSVPToFirebase) {
+        window.sendGuestRSVPToFirebase(name, zhauap, zhauaptext);
+    }
+    completeSuccess(name);
 }
 
 function namekate2($text) {
@@ -188,6 +181,9 @@ function otpravka2(divid, divid2) {
         var zhauaptext = getZhauapText(zhauap);
 
         function handleComplete(guestId) {
+            if (window.sendGuestRSVPToFirebase) {
+                window.sendGuestRSVPToFirebase(nameval, zhauap, zhauaptext);
+            }
             $("#nameengiz").one('hidden.bs.modal', function() {
                 setTimeout(function() {
                     $("#sattizhauap").modal('show');
@@ -208,17 +204,7 @@ function otpravka2(divid, divid2) {
             localStorage.setItem('shaqyru_guest_answer', JSON.stringify({ name: nameval, zhauap: zhauap, zhauaptext: zhauaptext }));
         }
 
-        $.ajax({
-            method: "POST",
-            url: "zayavka2.php",
-            data: {'rejim': 1, 'zhauap': zhauap, 'shaqyruid': $.trim(divid.children("input[name='shaqyruid']").val()), 'konakid': $.trim(divid.children("input[name='konakid']").val()), 'name': nameval }
-        })
-        .done(function (msg) {
-            handleComplete(msg || '1');
-        })
-        .fail(function () {
-            handleComplete('1');
-        });
+        handleComplete('guest_' + Date.now());
     } else {
         divid2.children("input[name='name']").css('border', '1px solid red');
     }

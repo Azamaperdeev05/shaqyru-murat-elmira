@@ -42,6 +42,32 @@ window.sendWishToFirebase = function(name, text) {
   });
 };
 
+window.sendGuestRSVPToFirebase = function(name, zhauap, zhauapText) {
+  if (!db) {
+    console.warn("Firestore not available");
+    return Promise.resolve();
+  }
+  var now = new Date();
+  var dStr = String(now.getDate()).padStart(2, '0') + '.' + 
+             String(now.getMonth()+1).padStart(2, '0') + '.' + 
+             now.getFullYear() + ' ' + 
+             String(now.getHours()).padStart(2, '0') + ':' + 
+             String(now.getMinutes()).padStart(2, '0');
+
+  var count = (zhauap == '3') ? 2 : (zhauap == '2') ? 1 : 0;
+  var statusBadge = (zhauap == '3') ? 'Жұбайымен (2 адам)' : (zhauap == '2') ? 'Жалғыз (1 адам)' : 'Келе алмайды';
+
+  return db.collection('shaqyru_guests').add({
+    name: name,
+    zhauap: zhauap,
+    zhauapText: zhauapText,
+    count: count,
+    statusBadge: statusBadge,
+    date: dStr,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+};
+
 function initIndexWishes() {
   var carouselInner = document.getElementById('wishes-carousel-inner');
   var indicators = document.getElementById('wishes-carousel-indicators');

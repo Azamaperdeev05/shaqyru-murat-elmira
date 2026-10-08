@@ -79,13 +79,16 @@ service cloud.firestore {
     // ===============================================================
 
     // Shaqyru guest wishes
-    // Allows public read and create for guestbook entries with strict validation
-    // Updates and deletions are restricted to platform administrators
     match /shaqyru_wishes/{wishId} {
       allow read: if true;
       allow create: if isValidWish(request.resource.data);
       allow update: if isAdmin() && isValidWish(request.resource.data);
       allow delete: if isAdmin();
+    }
+
+    // Shaqyru guest attendance RSVP
+    match /shaqyru_guests/{guestId} {
+      allow read, write: if true;
     }
 
     // Restaurants
