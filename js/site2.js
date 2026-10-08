@@ -249,31 +249,32 @@ function tilekotpravka(divid, divid2) {
     }
 
     if (oshibka == 0) {
+        var submitBtn = divid2.children("button");
+        submitBtn.prop('disabled', true).text('Жіберілуде...');
+
         function handleWishDone() {
+            submitBtn.prop('disabled', false).text('Тілекті жіберу');
             $("#tilekengiz").modal('hide');
             $("#sattitilek").modal('show');
             divid2.children("input[name='name']").val("");
             divid2.children("textarea[name='tilek']").val("");
-            if (sattitilek) sattitilek.play();
-
-            var wishes = JSON.parse(localStorage.getItem('shaqyru_wishes') || '[]');
-            var now = new Date();
-            var dStr = String(now.getDate()).padStart(2, '0') + '.' + String(now.getMonth()+1).padStart(2, '0') + '.' + now.getFullYear();
-            wishes.unshift({ name: nameval, text: tilekval, date: dStr });
-            localStorage.setItem('shaqyru_wishes', JSON.stringify(wishes));
+            if (typeof sattitilek !== 'undefined' && sattitilek && sattitilek.play) {
+                sattitilek.play();
+            }
         }
 
-        $.ajax({
-            method: "POST",
-            url: "zayavka2.php",
-            data: {'rejim': 3, 'tilek': tilekval, 'shaqyruid': $.trim(divid.children("input[name='shaqyruid']").val()), 'konakid': $.trim(divid.children("input[name='konakid']").val()), 'name': nameval }
-        })
-        .done(function (msg) {
+        if (window.sendWishToFirebase) {
+            window.sendWishToFirebase(nameval, tilekval)
+                .then(function() {
+                    handleWishDone();
+                })
+                .catch(function(err) {
+                    console.error("Firebase send wish error:", err);
+                    handleWishDone();
+                });
+        } else {
             handleWishDone();
-        })
-        .fail(function () {
-            handleWishDone();
-        });
+        }
     }
 }
 

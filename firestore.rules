@@ -1,0 +1,148 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: shaqyru_wishes
+// Document ID: {wishId} (auto-generated ID)
+// Fields:
+//   - name: string (required, 1-50 chars) - Guest author name
+//   - text: string (required, 1-1000 chars) - Wish message content
+//   - createdAt: timestamp | string | number (required) - Timestamp or date of submission
+//   - date: string (optional, <= 50 chars) - Formatted date string (e.g., DD.MM.YYYY)
+//   - shaqyruid: string (optional, <= 100 chars) - Target wedding / event invitation identifier
+//   - konakid: string (optional, <= 100 chars) - Guest identifier
+//
+// Collection: restaurants (RestoFlow SaaS)
+// Document ID: {restaurantId}
+// Fields:
+//   - ownerId: string (required) - User UID of restaurant owner
+//   - Subcollections: categories, products, orders, waiter_calls
+//
+// Collection: subscriptions
+// Collection: subscription_plans
+// Collection: activity_logs
+// Collection: alert_history
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    // Check if request is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if request is from a platform admin
+    function isAdmin() {
+      return isAuthenticated() && 
+        (request.auth.token.email == 'azamaperdeev05@gmail.com' || 
+         request.auth.token.email == 'admin@restoflow.com');
+    }
+
+    // Check if user owns a specific restaurant
+    function ownsRestaurant(restaurantId) {
+      return isAuthenticated() && 
+        get(/databases/$(database)/documents/restaurants/$(restaurantId)).data.ownerId == request.auth.uid;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    // Domain validator for guest wishes (shaqyru_wishes)
+    function isValidWish(data) {
+      return data.keys().hasAll(['name', 'text', 'createdAt']) &&
+        data.keys().hasOnly(['name', 'text', 'createdAt', 'date', 'shaqyruid', 'konakid']) &&
+        data.name is string &&
+        data.name.size() > 0 &&
+        data.name.size() <= 50 &&
+        data.text is string &&
+        data.text.size() > 0 &&
+        data.text.size() <= 1000 &&
+        ('createdAt' in data) &&
+        (data.createdAt is timestamp || 
+         (data.createdAt is string && data.createdAt.size() <= 50) || 
+         data.createdAt is number) &&
+        (!('date' in data) || (data.date is string && data.date.size() <= 50)) &&
+        (!('shaqyruid' in data) || (data.shaqyruid is string && data.shaqyruid.size() <= 100)) &&
+        (!('konakid' in data) || (data.konakid is string && data.konakid.size() <= 100));
+    }
+
+    // ===============================================================
+    // Rules Definitions
+    // ===============================================================
+
+    // Shaqyru guest wishes
+    // Allows public read and create for guestbook entries with strict validation
+    // Updates and deletions are restricted to platform administrators
+    match /shaqyru_wishes/{wishId} {
+      allow read: if true;
+      allow create: if isValidWish(request.resource.data);
+      allow update: if isAdmin() && isValidWish(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Restaurants
+    match /restaurants/{restaurantId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.ownerId == request.auth.uid);
+
+      // Categories subcollection
+      match /categories/{categoryId} {
+        allow read: if true;
+        allow write: if isAdmin() || ownsRestaurant(restaurantId);
+      }
+
+      // Products subcollection
+      match /products/{productId} {
+        allow read: if true;
+        allow write: if isAdmin() || ownsRestaurant(restaurantId);
+      }
+
+      // Orders subcollection
+      match /orders/{orderId} {
+        allow read: if true; // Let guests view order status and let admins view all orders
+        allow write: if true; // Let guests create orders and let owner update them
+      }
+
+      // Waiter calls subcollection
+      match /waiter_calls/{callId} {
+        allow read, write: if true; // Let anyone read or trigger waiter calls
+      }
+    }
+
+    // Subscriptions
+    match /subscriptions/{restaurantId} {
+      allow read: if isAdmin() || ownsRestaurant(restaurantId);
+      allow create: if isAuthenticated(); // Let user create their free tier subscription
+      allow update: if isAdmin() || ownsRestaurant(restaurantId);
+      allow delete: if isAdmin();
+    }
+
+    // Subscription Plans
+    match /subscription_plans/{planId} {
+      allow read: if true;
+      allow create: if true; // Safe self-healing seeder for empty database
+      allow update, delete: if isAdmin();
+    }
+
+    // Activity Logs
+    match /activity_logs/{logId} {
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if true; // Allow anonymous logs for ordering, etc.
+      allow update, delete: if isAdmin();
+    }
+
+    // Alert History
+    match /alert_history/{alertId} {
+      allow read, write: if true;
+    }
+  }
+}
