@@ -60,7 +60,6 @@ if (savedAnswer) {
 }
 
 var konakid = $("input[name='konakid']").val() || localStorage.getItem('shaqyru_konak_id');
-window.keleAlmaymynConfirmed = false;
 
 $("label[for='contactChoice3'], #contactChoice3").on('click', function(e) {
     e.preventDefault();
@@ -68,32 +67,22 @@ $("label[for='contactChoice3'], #contactChoice3").on('click', function(e) {
 });
 
 $("#btnBaribirKelemin").on('click', function() {
-    window.keleAlmaymynConfirmed = false;
     $("#contactChoice1").prop('checked', true);
-    $('#keleAlmaymynModal').modal('hide');
-    var storedName = localStorage.getItem('shaqyru_guest_name');
-    if(!storedName && (konakid == 0 || konakid === '' || konakid === null || konakid === undefined)) {
-        $('#nameengiz').modal('show');
-    } else {
-        otpravka($("#form-1"));
-    }
-});
-
-$("#btnZharaidy").on('click', function() {
-    window.keleAlmaymynConfirmed = true;
-    $("#contactChoice3").prop('checked', true);
-    $('#keleAlmaymynModal').modal('hide');
-    var storedName = localStorage.getItem('shaqyru_guest_name');
-    if(!storedName && (konakid == 0 || konakid === '' || konakid === null || konakid === undefined)) {
-        $('#nameengiz').modal('show');
-    } else {
-        otpravka($("#form-1"));
-    }
+    $('#keleAlmaymynModal').one('hidden.bs.modal', function() {
+        setTimeout(function() {
+            var storedName = localStorage.getItem('shaqyru_guest_name');
+            if(!storedName || konakid == 0 || konakid === '' || konakid === null || konakid === undefined) {
+                $('#nameengiz').modal('show');
+            } else {
+                otpravka($("#form-1"));
+            }
+        }, 100);
+    }).modal('hide');
 });
 
 $(".zayotrp").click(function() {
     var zhauap = $("input[name='zhauap']:checked").val();
-    if (zhauap == '1' && !window.keleAlmaymynConfirmed) {
+    if (zhauap == '1') {
         $('#keleAlmaymynModal').modal('show');
         return;
     }
@@ -199,9 +188,14 @@ function otpravka2(divid, divid2) {
         var zhauaptext = getZhauapText(zhauap);
 
         function handleComplete(guestId) {
-            $("#nameengiz").modal('hide');
-            $("#sattizhauap").modal('show');
-            if (sattizhauap) sattizhauap.play();
+            $("#nameengiz").one('hidden.bs.modal', function() {
+                setTimeout(function() {
+                    $("#sattizhauap").modal('show');
+                    if (typeof sattizhauap !== 'undefined' && sattizhauap && sattizhauap.play) {
+                        sattizhauap.play();
+                    }
+                }, 100);
+            }).modal('hide');
             divid2.children("input[name='name']").val("");
             $(".otvetname").html(nameval);
             $(".otvetzhauap").html(zhauaptext);
